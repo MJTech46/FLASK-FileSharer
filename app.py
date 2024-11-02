@@ -3,7 +3,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 ## flask imports ##
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -28,7 +28,7 @@ class ShareLink(db.Model):
 ## routing ##
 @app.route("/")
 def index():
-    return "Flask is installed :)"
+    return render_template("index.html")
 
 ## main loop ##
 if __name__ == "__main__":
