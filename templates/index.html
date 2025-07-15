@@ -1,148 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>File Sharing App</title>
-    <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background-color: #1e1e2f;
-        color: #ffffff;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
+<head>
+  <meta charset="UTF-8">
+  <title>Anonymous File Uploader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
 
-      .container {
-        text-align: center;
-        background: #29293d;
-        border-radius: 12px;
-        box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
-        padding: 30px;
-        width: 90%;
-        max-width: 600px;
-      }
+    h1 {
+      color: #03DAC6;
+      text-align: center;
+      margin-bottom: 30px;
+    }
 
-      .header {
-        font-size: 1.8rem;
-        margin-bottom: 10px;
-        font-weight: bold;
-      }
+    .upload-box, .file-list {
+      background: #1f1f1f;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
 
-      .drag-area {
-        border: 2px dashed #4e4e6a;
-        border-radius: 10px;
-        padding: 30px;
-        margin: 20px 0;
-        cursor: pointer;
-        transition: background 0.3s;
-      }
+    .upload-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-      .drag-area:hover {
-        background: #383856;
-      }
+    .upload-controls label {
+      background-color: #2a2a2a;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid #444;
+      font-weight: 500;
+    }
 
-      .drag-area p {
-        margin: 0;
-        font-size: 1.1rem;
-        color: #9fa6c1;
-      }
+    .upload-controls input[type=file] {
+      display: none;
+    }
 
-      .file-input {
-        display: none;
-      }
+    .upload-controls button {
+      background-color: #03DAC6;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
 
-      .upload-button {
-        background: #3d5afe;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.3s;
-      }
+    .upload-controls button:hover {
+      background-color: #00c4b4;
+    }
 
-      .upload-button:hover {
-        background: #2f4dda;
-      }
+    .file-name-preview {
+      color: #bbb;
+      font-size: 14px;
+    }
 
-      .uploaded-files {
-        margin-top: 20px;
-        text-align: left;
-      }
+    .progress-bar {
+      width: 100%;
+      background: #333;
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+      margin-top: 10px;
+    }
 
-      .uploaded-files ul {
-        list-style: none;
-        padding: 0;
-      }
+    .progress {
+     width: 0%;
+     height: 20px;
+     background-color: #03DAC6;
+     text-align: center;
+     color: white;
+     font-size: 14px;
+     font-weight: bold;
+    }
 
-      .uploaded-files li {
-        margin: 10px 0;
-        background: #3b3b55;
-        padding: 10px;
-        border-radius: 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
 
-      .uploaded-files li span {
-        color: #c2c8e3;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">File Sharing App</div>
-      <label for="file-input" class="drag-area">
-        <p>Drag & Drop your files here or click to upload</p>
-      </label>
-      <input id="file-input" type="file" multiple class="file-input" />
-      <button class="upload-button" onclick="uploadFiles()">
-        Upload Files
-      </button>
+    .file-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
 
-      <div class="uploaded-files" id="uploaded-files">
-        <h3>Uploaded Files</h3>
-        <ul id="file-list"></ul>
-      </div>
+    .file-header select {
+      background: #2a2a2a;
+      color: #fff;
+      padding: 6px 10px;
+      border: 1px solid #444;
+      border-radius: 6px;
+    }
+
+    .file-item {
+      background: #292929;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .file-item:hover {
+      background: #333333;
+    }
+
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0; /* this is critical for text-overflow inside flex items */
+  }
+
+
+    .file-icon {
+      font-size: 20px;
+    }
+
+  .file-name {
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    width: 100%;
+  }
+
+
+    .preview-label {
+      font-size: 12px;
+      background: #03DAC6;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    .file-meta {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 4px;
+      padding-left: 32px;
+    }
+  </style>
+</head>
+<body>
+  <h1>File Drop</h1>
+
+  <div class="upload-box">
+    <div class="upload-controls">
+      <label for="fileInput">Choose File</label>
+      <input type="file" id="fileInput" onchange="handleFileChange(this)">
+      <button onclick="uploadFile()">Upload</button>
+      <span id="fileNameDisplay" class="file-name-preview">No file selected</span>
     </div>
 
-    <script>
-      const fileInput = document.getElementById("file-input");
-      const fileList = document.getElementById("file-list");
+    <div class="progress-bar">
+      <div id="progress" class="progress">0%</div>
+    </div>
+    <div id="uploadStatus"></div>
+  </div>
 
-      fileInput.addEventListener("change", () => {
-        addFilesToList(fileInput.files);
+  <div class="file-list">
+    <div class="file-header">
+      <h2>Available Files</h2>
+      <label>
+        Sort by:
+        <select id="sortSelect" onchange="sortFiles()">
+          <option value="date">Date (Latest)</option>
+          <option value="name">Name</option>
+          <option value="size">Size</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="fileContainer">
+      {% for file in files %}
+        <div class="file-item"
+            data-name="{{ file.name }}"
+            data-size="{{ file.size }}"
+            data-date="{{ file.mtime }}"
+            onclick="location.href='{{ url_for('uploaded_file', filename=file.name) }}'">
+        <div class="file-info">
+            <span class="file-icon">📄</span>
+            <span class="file-name" title="{{ file.name }}">{{ file.name }}</span>
+            {% if file.preview %}
+            <span class="preview-label">Preview</span>
+            {% endif %}
+        </div>
+        <div class="file-meta">
+            Size: {{ file.size | filesizeformat }} &middot;
+            Uploaded: {{ file.mtime | datetimeformat }}
+        </div>
+        </div>
+    {% endfor %}
+
+    </div>
+  </div>
+
+  <script>
+    function handleFileChange(input) {
+      const file = input.files[0];
+      const label = document.getElementById('fileNameDisplay');
+      label.innerText = file ? file.name : 'No file selected';
+      document.querySelector('.progress-bar').style.display = file ? 'block' : 'none';
+    }
+
+    function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      if (!file) return alert("Select a file first");
+
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append("file", file);
+
+      xhr.upload.addEventListener("progress", function (e) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        const progress = document.getElementById('progress');
+        progress.style.width = percent + "%";
+        progress.innerText = percent + "%";
       });
 
-      document.querySelector(".drag-area").addEventListener("click", () => {
-        fileInput.click();
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          document.getElementById('uploadStatus').innerText = xhr.responseText;
+          if (xhr.status === 200) {
+            setTimeout(() => { location.reload(); }, 1500);
+          }
+        }
+      };
+
+      xhr.open("POST", "/upload", true);
+      xhr.send(formData);
+    }
+
+    function sortFiles() {
+      const sortValue = document.getElementById('sortSelect').value;
+      const container = document.getElementById('fileContainer');
+      const files = Array.from(container.getElementsByClassName('file-item'));
+
+      files.sort((a, b) => {
+        const aVal = a.dataset[sortValue];
+        const bVal = b.dataset[sortValue];
+        return sortValue === 'name'
+          ? aVal.localeCompare(bVal)
+          : parseFloat(bVal) - parseFloat(aVal);
       });
 
-      function addFilesToList(files) {
-        for (const file of files) {
-          const li = document.createElement("li");
-          li.innerHTML = `<span>${file.name}</span> <span>${(
-            file.size / 1024
-          ).toFixed(2)} KB</span>`;
-          fileList.appendChild(li);
-        }
-      }
-
-      function uploadFiles() {
-        if (!fileList.children.length) {
-          alert("No files selected for upload!");
-          return;
-        }
-
-        alert("Files uploaded successfully!");
-        fileList.innerHTML = "";
-      }
-    </script>
-  </body>
+      container.innerHTML = '';
+      files.forEach(file => container.appendChild(file));
+    }
+  </script>
+</body>
 </html>

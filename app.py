@@ -1,38 +1,81 @@
-## other imports ##
-from uuid import uuid4
-from datetime import datetime, timezone
-
-## flask imports ##
-from flask import Flask, request, render_template
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request, send_from_directory, render_template, jsonify
+from werkzeug.utils import secure_filename
+from datetime import datetime
+from pathlib import Path
+import mimetypes
 
 app = Flask(__name__)
+UPLOAD_FOLDER = Path("uploads")
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-## DB setup ##
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///sqlite.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # Disabling some memory intensive background workload
-db = SQLAlchemy(app)
+UPLOAD_FOLDER.mkdir(exist_ok=True)
 
-## models ##
-class File(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    share_link_id = db.Column(db.String, db.ForeignKey('share_link.id'))
 
-class ShareLink(db.Model):
-    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid4()))
-    created_date = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    expiry_date = db.Column(db.DateTime, nullable=True)
-    files = db.relationship('File', backref='share_link', lazy=True)
+### Template Filters ###
+@app.template_filter('file_size')
+def file_size_filter(path):
+    return Path(path).stat().st_size if Path(path).exists() else 0
 
-## routing ##
-@app.route("/")
+@app.template_filter('file_mtime')
+def file_mtime_filter(path):
+    return Path(path).stat().st_mtime if Path(path).exists() else 0
+
+@app.template_filter('datetimeformat')
+def datetimeformat(timestamp):
+    return datetime.fromtimestamp(timestamp).strftime('%b %d, %Y %I:%M %p')
+
+@app.template_filter('truncate_filename')
+def truncate_filename(filename, max_length=25):
+    if len(filename) <= max_length:
+        return filename
+    name, ext = Path(filename).stem, Path(filename).suffix
+    return f"{name[:12]}...{name[-5:]}{ext}"
+
+@app.template_filter('filesizeformat')
+def filesizeformat(size):
+    for unit in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+        if size < 1024.0:
+            return f"{int(size)} {unit}" if unit == 'bytes' else f"{size:.1f} {unit}"
+        size /= 1024.0
+
+
+### Utility ###
+def is_previewable(filename):
+    mime_type, _ = mimetypes.guess_type(filename)
+    return mime_type and mime_type.split('/')[0] in ['text', 'image', 'video', 'audio']
+
+
+### Routes ###
+@app.route('/')
 def index():
-    return render_template("index.html")
+    files = []
+    for file in UPLOAD_FOLDER.iterdir():
+        if file.is_file():
+            files.append({
+                'name': file.name,
+                'size': file.stat().st_size,
+                'mtime': file.stat().st_mtime,
+                'preview': is_previewable(file.name)
+            })
+    files.sort(key=lambda x: x['mtime'], reverse=True)
+    return render_template('index.html', files=files, upload_folder=str(UPLOAD_FOLDER))
 
-## main loop ##
-if __name__ == "__main__":
-    # To ensure tables are created (only ones)
-    with app.app_context():
-        db.create_all()
-    app.run()
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    filename = secure_filename(file.filename)
+    file.save(UPLOAD_FOLDER / filename)
+    return jsonify({'message': 'File uploaded successfully', 'filename': filename}), 200
+
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(str(UPLOAD_FOLDER), filename)
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
