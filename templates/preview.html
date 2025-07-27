@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Preview: {{ filename }}</title>
+  <style>
+    body {
+      margin: 0;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #pdf-container {
+      flex: 1;
+      overflow: auto;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+    #toolbar {
+      padding: 10px;
+      background: #1f1f1f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #toolbar button {
+      background: #03DAC6;
+      color: #000;
+      border: none;
+      padding: 8px 12px;
+      margin: 0 5px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button onclick="prevPage()">⬅ Prev</button>
+    <span id="page-num">1</span> / <span id="page-count">?</span>
+    <button onclick="nextPage()">Next ➡</button>
+  </div>
+  <div id="pdf-container">
+    <canvas id="pdf-render"></canvas>
+  </div>
+
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    const url = "{{ url_for('uploaded_file', filename=filename) }}";
+
+    let pdfDoc = null,
+        pageNum = 1,
+        pageIsRendering = false,
+        pageNumIsPending = null;
+
+    const scale = 1.5,
+          canvas = document.getElementById('pdf-render'),
+          ctx = canvas.getContext('2d');
+
+    const renderPage = num => {
+      pageIsRendering = true;
+
+      pdfDoc.getPage(num).then(page => {
+        const viewport = page.getViewport({ scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderCtx = {
+          canvasContext: ctx,
+          viewport
+        };
+
+        page.render(renderCtx).promise.then(() => {
+          pageIsRendering = false;
+
+          if (pageNumIsPending !== null) {
+            renderPage(pageNumIsPending);
+            pageNumIsPending = null;
+          }
+        });
+
+        document.getElementById('page-num').textContent = num;
+      });
+    };
+
+    const queueRenderPage = num => {
+      if (pageIsRendering) {
+        pageNumIsPending = num;
+      } else {
+        renderPage(num);
+      }
+    };
+
+    const prevPage = () => {
+      if (pageNum <= 1) return;
+      pageNum--;
+      queueRenderPage(pageNum);
+    };
+
+    const nextPage = () => {
+      if (pageNum >= pdfDoc.numPages) return;
+      pageNum++;
+      queueRenderPage(pageNum);
+    };
+
+    pdfjsLib.getDocument(url).promise.then(pdfDoc_ => {
+      pdfDoc = pdfDoc_;
+      document.getElementById('page-count').textContent = pdfDoc.numPages;
+      renderPage(pageNum);
+    });
+  </script>
+</body>
+</html>

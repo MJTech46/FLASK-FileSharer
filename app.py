@@ -72,6 +72,12 @@ def upload_file():
     return jsonify({'message': 'File uploaded successfully', 'filename': filename}), 200
 
 
+@app.route('/preview/<filename>')
+def preview_file(filename):
+    if not filename.lower().endswith('.pdf'):
+        return "Preview not supported for this file type.", 400
+    return render_template('preview.html', filename=filename)
+
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(str(UPLOAD_FOLDER), filename)
